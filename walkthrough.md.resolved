@@ -1,0 +1,280 @@
+# 📊 Analisis Kode Program Ice Tea Shop
+
+## Ringkasan Aplikasi
+Aplikasi web **Ice Tea Shop** berbasis Laravel untuk manajemen penjualan minuman dengan fitur pemesanan online dan dashboard admin.
+
+---
+
+## 🗄️ Database Schema
+
+```mermaid
+erDiagram
+    ADMIN {
+        bigint id PK
+        string username
+        string password
+    }
+    
+    MENU {
+        bigint id PK
+        string nama_menu
+        decimal harga
+        text deskripsi
+        string gambar
+        int stok
+        int terjual
+    }
+    
+    PESANAN {
+        bigint id PK
+        text detail_pesanan
+        decimal total_harga
+        string metode_pembayaran
+        string status_pesanan
+        timestamp waktu_pesan
+    }
+```
+
+---
+
+## 👥 Sesi & Akses Pengguna
+
+### 🔓 Public (Tanpa Login)
+
+| Route | Controller | Fungsi | CRUD |
+|-------|------------|--------|------|
+| `/` | `HomeController@index` | Halaman utama | - |
+| `/menu` | `MenuController@index` | Lihat daftar menu | **READ** |
+| `/contact` | `HomeController@contact` | Halaman kontak | - |
+| `/simpan-pesanan` | `OrderController@store` | Buat pesanan baru | **CREATE** |
+
+**Flow User Public:**
+```mermaid
+flowchart LR
+    A[Buka Website] --> B[Lihat Menu]
+    B --> C[Pilih Menu]
+    C --> D[Checkout]
+    D --> E[Pilih Metode Bayar]
+    E --> F[Simpan Pesanan]
+```
+
+---
+
+### 🔐 Admin (Perlu Login)
+
+**Middleware:** [AdminMiddleware](file:///C:/Users/USER/Documents/laravelproject/app/Http/Middleware/AdminMiddleware.php#9-20) - Cek `session('admin')` untuk akses
+
+| Route | Controller | Fungsi | CRUD |
+|-------|------------|--------|------|
+| `/login` | `AuthController@showLogin` | Form login | - |
+| `POST /login` | `AuthController@login` | Proses login | - |
+| `/logout` | `AuthController@logout` | Logout admin | - |
+
+---
+
+## 📁 Detail Modul per Fungsi
+
+### 1️⃣ Modul Autentikasi ([AuthController](file:///C:/Users/USER/Documents/laravelproject/app/Http/Controllers/AuthController.php#8-47))
+
+| Method | Fungsi | Detail |
+|--------|--------|--------|
+| [showLogin()](file:///C:/Users/USER/Documents/laravelproject/app/Http/Controllers/AuthController.php#10-17) | Tampilkan form login | Redirect ke dashboard jika sudah login |
+| [login()](file:///C:/Users/USER/Documents/laravelproject/app/Http/Controllers/AuthController.php#18-40) | Proses login | Validasi username & password (plain text) |
+| [logout()](file:///C:/Users/USER/Documents/laravelproject/app/Http/Controllers/AuthController.php#41-46) | Logout | Hapus session `admin` |
+
+**File Terkait:**
+- Controller: [AuthController.php](file:///C:/Users/USER/Documents/laravelproject/app/Http/Controllers/AuthController.php)
+- View: [login.blade.php](file:///C:/Users/USER/Documents/laravelproject/resources/views/admin/login.blade.php)
+- Model: [Admin.php](file:///C:/Users/USER/Documents/laravelproject/app/Models/Admin.php)
+
+---
+
+### 2️⃣ Dashboard Admin ([DashboardController](file:///C:/Users/USER/Documents/laravelproject/app/Http/Controllers/DashboardController.php#10-71))
+
+| Method | Fungsi | Detail |
+|--------|--------|--------|
+| [index()](file:///C:/Users/USER/Documents/laravelproject/app/Http/Controllers/DashboardController.php#12-70) | Tampilkan dashboard | Statistik, chart, & data tabel |
+
+**Statistik yang ditampilkan:**
+- Total menu
+- Total pesanan
+- Stok menipis (< 10)
+- Omset (pesanan Selesai)
+- Chart metode pembayaran
+- Chart pendapatan bulanan
+- Top 5 menu terlaris
+- 5 pesanan terakhir
+
+**File Terkait:**
+- Controller: [DashboardController.php](file:///C:/Users/USER/Documents/laravelproject/app/Http/Controllers/DashboardController.php)
+- View: [dashboard.blade.php](file:///C:/Users/USER/Documents/laravelproject/resources/views/admin/dashboard.blade.php)
+
+---
+
+### 3️⃣ Manajemen Menu ([MenuController](file:///C:/Users/USER/Documents/laravelproject/app/Http/Controllers/MenuController.php#9-100))
+
+| Method | Route | Fungsi | CRUD |
+|--------|-------|--------|------|
+| [index()](file:///C:/Users/USER/Documents/laravelproject/app/Http/Controllers/DashboardController.php#12-70) | `/menu` | Daftar menu (public) | **READ** |
+| [create()](file:///C:/Users/USER/Documents/laravelproject/app/Http/Controllers/MenuController.php#18-22) | `/admin/menu/create` | Form tambah menu | - |
+| [store()](file:///C:/Users/USER/Documents/laravelproject/app/Http/Controllers/OrderController.php#71-111) | `POST /admin/menu` | Simpan menu baru + upload gambar | **CREATE** |
+| [edit($id)](file:///C:/Users/USER/Documents/laravelproject/app/Http/Controllers/MenuController.php#47-52) | `/admin/menu/{id}/edit` | Form edit menu | - |
+| [update($id)](file:///C:/Users/USER/Documents/laravelproject/app/Http/Controllers/StockController.php#16-28) | `PUT /admin/menu/{id}` | Update menu + gambar | **UPDATE** |
+| [destroy($id)](file:///C:/Users/USER/Documents/laravelproject/app/Http/Controllers/MenuController.php#86-99) | `DELETE /admin/menu/{id}` | Hapus menu + file gambar | **DELETE** |
+
+**Validasi Store/Update:**
+- `nama_menu`: required, string, max 255
+- `harga`: required, numeric
+- `deskripsi`: nullable, string  
+- `gambar`: required (store), nullable (update), image, mimes: jpeg/png/jpg/gif/webp, max 5MB
+
+**File Terkait:**
+- Controller: [MenuController.php](file:///C:/Users/USER/Documents/laravelproject/app/Http/Controllers/MenuController.php)
+- Views: 
+  - [menu.blade.php](file:///C:/Users/USER/Documents/laravelproject/resources/views/public/menu.blade.php) (public)
+  - [create.blade.php](file:///C:/Users/USER/Documents/laravelproject/resources/views/admin/menu/create.blade.php)
+  - [edit.blade.php](file:///C:/Users/USER/Documents/laravelproject/resources/views/admin/menu/edit.blade.php)
+- Model: [Menu.php](file:///C:/Users/USER/Documents/laravelproject/app/Models/Menu.php)
+
+---
+
+### 4️⃣ Manajemen Stok ([StockController](file:///C:/Users/USER/Documents/laravelproject/app/Http/Controllers/StockController.php#8-42))
+
+| Method | Route | Fungsi | CRUD |
+|--------|-------|--------|------|
+| [index()](file:///C:/Users/USER/Documents/laravelproject/app/Http/Controllers/DashboardController.php#12-70) | `/admin/stok` | Daftar stok menu | **READ** |
+| [update()](file:///C:/Users/USER/Documents/laravelproject/app/Http/Controllers/StockController.php#16-28) | `POST /admin/stok` | Update jumlah stok | **UPDATE** |
+| [destroy($id)](file:///C:/Users/USER/Documents/laravelproject/app/Http/Controllers/MenuController.php#86-99) | `DELETE /admin/stok/{id}` | Hapus menu | **DELETE** |
+
+**File Terkait:**
+- Controller: [StockController.php](file:///C:/Users/USER/Documents/laravelproject/app/Http/Controllers/StockController.php)
+- View: [stok.blade.php](file:///C:/Users/USER/Documents/laravelproject/resources/views/admin/stok.blade.php)
+
+---
+
+### 5️⃣ Manajemen Pesanan ([OrderController](file:///C:/Users/USER/Documents/laravelproject/app/Http/Controllers/OrderController.php#9-133))
+
+| Method | Route | Fungsi | CRUD |
+|--------|-------|--------|------|
+| [index()](file:///C:/Users/USER/Documents/laravelproject/app/Http/Controllers/DashboardController.php#12-70) | `/admin/pesanan` | Daftar semua pesanan | **READ** |
+| [store()](file:///C:/Users/USER/Documents/laravelproject/app/Http/Controllers/OrderController.php#71-111) | `POST /simpan-pesanan` | Simpan pesanan baru (public) | **CREATE** |
+| [updateStatus()](file:///C:/Users/USER/Documents/laravelproject/app/Http/Controllers/OrderController.php#20-70) | `POST /admin/pesanan/status` | Update status pesanan | **UPDATE** |
+| [destroy($id)](file:///C:/Users/USER/Documents/laravelproject/app/Http/Controllers/MenuController.php#86-99) | `DELETE /admin/pesanan/{id}` | Hapus pesanan | **DELETE** |
+
+**Status Pesanan:** `Baru` → `Selesai` / `Batal`
+
+**Logika Update Status:**
+- **Selesai → Batal/Baru**: Kurangi `terjual`, Tambah `stok`
+- **Baru/Batal → Selesai**: Tambah `terjual`
+- **Baru/Selesai → Batal**: Tambah `stok` (restock)
+- **Batal → Baru/Selesai**: Kurangi `stok`
+
+**File Terkait:**
+- Controller: [OrderController.php](file:///C:/Users/USER/Documents/laravelproject/app/Http/Controllers/OrderController.php)
+- View: [pesanan.blade.php](file:///C:/Users/USER/Documents/laravelproject/resources/views/admin/pesanan.blade.php)
+- Model: [Pesanan.php](file:///C:/Users/USER/Documents/laravelproject/app/Models/Pesanan.php)
+
+---
+
+## 📂 Struktur File
+
+```
+laravelproject/
+├── app/
+│   ├── Http/
+│   │   ├── Controllers/
+│   │   │   ├── AuthController.php      # Login/Logout
+│   │   │   ├── DashboardController.php # Dashboard admin
+│   │   │   ├── HomeController.php      # Halaman public
+│   │   │   ├── MenuController.php      # CRUD Menu
+│   │   │   ├── OrderController.php     # CRUD Pesanan
+│   │   │   └── StockController.php     # Kelola stok
+│   │   └── Middleware/
+│   │       └── AdminMiddleware.php     # Proteksi route admin
+│   └── Models/
+│       ├── Admin.php                   # Model admin
+│       ├── Menu.php                    # Model menu
+│       └── Pesanan.php                 # Model pesanan
+├── resources/views/
+│   ├── admin/
+│   │   ├── dashboard.blade.php
+│   │   ├── login.blade.php
+│   │   ├── pesanan.blade.php
+│   │   ├── stok.blade.php
+│   │   └── menu/
+│   │       ├── create.blade.php
+│   │       └── edit.blade.php
+│   └── public/
+│       ├── home.blade.php
+│       ├── menu.blade.php
+│       └── contact.blade.php
+└── routes/
+    └── web.php                         # Definisi semua route
+```
+
+---
+
+## 🔄 Flow Diagram Lengkap
+
+```mermaid
+flowchart TB
+    subgraph PUBLIC["🌐 Public Access"]
+        H[Home Page]
+        M[Menu Page]
+        C[Contact Page]
+        SP[Simpan Pesanan]
+    end
+    
+    subgraph AUTH["🔐 Authentication"]
+        L[Login Page]
+        LO[Logout]
+    end
+    
+    subgraph ADMIN["👤 Admin Dashboard"]
+        D[Dashboard]
+        
+        subgraph MENU_MGMT["📋 Menu Management"]
+            TM[Tambah Menu]
+            EM[Edit Menu]
+            HM[Hapus Menu]
+        end
+        
+        subgraph STOK_MGMT["📦 Stok Management"]
+            KS[Kelola Stok]
+            HS[Hapus dari Stok]
+        end
+        
+        subgraph ORDER_MGMT["🛒 Order Management"]
+            LP[Lihat Pesanan]
+            US[Update Status]
+            HP[Hapus Pesanan]
+        end
+    end
+    
+    H --> M
+    M --> SP
+    L -->|Success| D
+    L -->|Fail| L
+    D --> MENU_MGMT
+    D --> STOK_MGMT
+    D --> ORDER_MGMT
+    LO --> H
+```
+
+---
+
+## ⚠️ Catatan Keamanan
+
+> [!WARNING]
+> Password admin disimpan dalam **plain text** tanpa hashing. Disarankan menggunakan `bcrypt` atau `Hash::make()` untuk keamanan yang lebih baik.
+
+---
+
+## 📊 Ringkasan CRUD per Modul
+
+| Modul | Create | Read | Update | Delete |
+|-------|:------:|:----:|:------:|:------:|
+| **Menu** | ✅ | ✅ | ✅ | ✅ |
+| **Stok** | - | ✅ | ✅ | ✅ |
+| **Pesanan** | ✅ | ✅ | ✅ | ✅ |
+| **Admin** | - | - | - | - |
