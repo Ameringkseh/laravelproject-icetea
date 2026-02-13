@@ -45,17 +45,12 @@ if ($dbDatabase === 'db_icetea' || $dbHost === '127.0.0.1' || $dbHost === 'local
     ");
 }
 
-// Force Postgres Config if needed
-if (getenv('DB_CONNECTION') === 'pgsql') {
-    config([
-        'database.default' => 'pgsql',
-        'database.connections.pgsql.host' => getenv('DB_HOST'),
-        'database.connections.pgsql.port' => getenv('DB_PORT'),
-        'database.connections.pgsql.database' => getenv('DB_DATABASE'),
-        'database.connections.pgsql.username' => getenv('DB_USERNAME'),
-        'database.connections.pgsql.password' => getenv('DB_PASSWORD'),
-        'database.connections.pgsql.sslmode' => getenv('DB_SSLMODE') ?: 'require',
-    ]);
+// Force Postgres via Environment Variables (if needed)
+// Use putenv() instead of config() to inject environment variables before bootstrap
+if (getenv('DB_CONNECTION') !== 'pgsql') {
+    putenv('DB_CONNECTION=pgsql');
+    $_ENV['DB_CONNECTION'] = 'pgsql';
+    $_SERVER['DB_CONNECTION'] = 'pgsql';
 }
 
 $app->handleRequest(Request::capture());
