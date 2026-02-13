@@ -15,18 +15,37 @@ $app = require_once __DIR__.'/../bootstrap/app.php';
 
 /*
 |--------------------------------------------------------------------------
-| Force Vercel Environment Configuration
+| Configure Vercel Environment & Force Postgres
 |--------------------------------------------------------------------------
-|
-| We explicitly set the configuration here to ensure Vercel environment
-| variables are used, bypassing any potential config caching or
-| .env file loading issues.
-|
 */
 
 $app->useStoragePath('/tmp/storage');
 
-// Force Database Configuration from Environment
+// DETECT WRONG CONFIGURATION (Local DB imported by mistake)
+$dbHost = getenv('DB_HOST');
+$dbDatabase = getenv('DB_DATABASE'); // e.g. 'db_icetea'
+
+if ($dbDatabase === 'db_icetea' || $dbHost === '127.0.0.1' || $dbHost === 'localhost') {
+    http_response_code(500);
+    die("
+    <div style='font-family: sans-serif; padding: 2rem; max-width: 600px; margin: 0 auto; border: 2px solid red; border-radius: 8px; background: #fff0f0;'>
+        <h1 style='color: red;'>⚠️ KONFIGURASI SALAH (WRONG CONFIG)</h1>
+        <p>Aplikasi mencoba connect ke database LOKAL: <strong>$dbDatabase</strong> di <strong>$dbHost</strong>.</p>
+        <p>Ini berarti Anda meng-import file <code>.env</code> computer Anda ke Vercel.</p>
+        <hr>
+        <h3>JANGAN MEMAKAI FILE .env DARI LAPTOP ANDA!</h3>
+        <p>Silakan ke Vercel Dashboard → Settings → Environment Variables:</p>
+        <ol>
+            <li>HAPUS SEMUA variable yang ada sekarang.</li>
+            <li>Import ulang file <code>.env.vercel</code> yang sudah saya buatkan (ada di folder project Anda).</li>
+            <li>Pastikan <code>DB_CONNECTION=pgsql</code> dan <code>DB_HOST=...neon.tech...</code></li>
+        </ol>
+        <p>Setelah diperbaiki, lakukan Redeploy.</p>
+    </div>
+    ");
+}
+
+// Force Postgres Config if needed
 if (getenv('DB_CONNECTION') === 'pgsql') {
     config([
         'database.default' => 'pgsql',
@@ -37,18 +56,6 @@ if (getenv('DB_CONNECTION') === 'pgsql') {
         'database.connections.pgsql.password' => getenv('DB_PASSWORD'),
         'database.connections.pgsql.sslmode' => getenv('DB_SSLMODE') ?: 'require',
     ]);
-}
-
-// Debug block (hidden by default)
-if (isset($_GET['debug_env'])) {
-    header('Content-Type: application/json');
-    echo json_encode([
-        'status' => 'Configuration Forced',
-        'db_default' => config('database.default'),
-        'db_host' => config('database.connections.pgsql.host'),
-        'env_connection' => getenv('DB_CONNECTION'),
-    ]);
-    exit;
 }
 
 $app->handleRequest(Request::capture());
