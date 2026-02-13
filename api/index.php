@@ -5,55 +5,31 @@ use Illuminate\Http\Request;
 
 define('LARAVEL_START', microtime(true));
 
-/*
-|--------------------------------------------------------------------------
-| Check If The Application Is In Maintenance Mode
-|--------------------------------------------------------------------------
-|
-| If the application is in maintenance / demo mode via the "down" command
-| we will load this file so that any pre-rendered content can be shown
-| instead of starting the framework, which could cause an exception.
-|
-*/
-
 if (file_exists($maintenance = __DIR__.'/../storage/framework/maintenance.php')) {
     require $maintenance;
 }
 
-/*
-|--------------------------------------------------------------------------
-| Register The Auto Loader
-|--------------------------------------------------------------------------
-|
-| Composer provides a convenient, automatically generated class loader for
-| this application. We just need to utilize it! We'll simply require it
-| into the script here so we don't need to manually load our classes.
-|
-*/
-
 require __DIR__.'/../vendor/autoload.php';
 
-/*
-|--------------------------------------------------------------------------
-| Run The Application
-|--------------------------------------------------------------------------
-|
-| Once we have the application, we can handle the incoming request using
-| the application's HTTP kernel. Then, we will send the response back
-| to this client's browser, allowing them to enjoy our application.
-|
-*/
-
 $app = require_once __DIR__.'/../bootstrap/app.php';
+
+// DEBUG: Check Environment Variables (moved after app creation to access config())
+if (isset($_GET['debug_env'])) {
+    header('Content-Type: application/json');
+    echo json_encode([
+        'getenv_DB_CONNECTION' => getenv('DB_CONNECTION'),
+        'getenv_DB_HOST' => getenv('DB_HOST'),
+        'config_database_default' => config('database.default'),
+        'config_connections_pgsql_host' => config('database.connections.pgsql.host'),
+        'config_connections_mysql_host' => config('database.connections.mysql.host'),
+    ]);
+    exit;
+}
 
 /*
 |--------------------------------------------------------------------------
 | Configure Vercel Environment
 |--------------------------------------------------------------------------
-|
-| Force the storage path to /tmp since the Vercel filesystem is read-only.
-| This ensures logs, sessions, views, and cache are written to a writable location.
-|
 */
 
 $app->useStoragePath('/tmp/storage');
