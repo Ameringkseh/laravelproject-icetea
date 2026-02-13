@@ -13,25 +13,42 @@ require __DIR__.'/../vendor/autoload.php';
 
 $app = require_once __DIR__.'/../bootstrap/app.php';
 
-// DEBUG: Check Environment Variables (moved after app creation to access config())
-if (isset($_GET['debug_env'])) {
-    header('Content-Type: application/json');
-    echo json_encode([
-        'getenv_DB_CONNECTION' => getenv('DB_CONNECTION'),
-        'getenv_DB_HOST' => getenv('DB_HOST'),
-        'config_database_default' => config('database.default'),
-        'config_connections_pgsql_host' => config('database.connections.pgsql.host'),
-        'config_connections_mysql_host' => config('database.connections.mysql.host'),
-    ]);
-    exit;
-}
-
 /*
 |--------------------------------------------------------------------------
-| Configure Vercel Environment
+| Force Vercel Environment Configuration
 |--------------------------------------------------------------------------
+|
+| We explicitly set the configuration here to ensure Vercel environment
+| variables are used, bypassing any potential config caching or
+| .env file loading issues.
+|
 */
 
 $app->useStoragePath('/tmp/storage');
+
+// Force Database Configuration from Environment
+if (getenv('DB_CONNECTION') === 'pgsql') {
+    config([
+        'database.default' => 'pgsql',
+        'database.connections.pgsql.host' => getenv('DB_HOST'),
+        'database.connections.pgsql.port' => getenv('DB_PORT'),
+        'database.connections.pgsql.database' => getenv('DB_DATABASE'),
+        'database.connections.pgsql.username' => getenv('DB_USERNAME'),
+        'database.connections.pgsql.password' => getenv('DB_PASSWORD'),
+        'database.connections.pgsql.sslmode' => getenv('DB_SSLMODE') ?: 'require',
+    ]);
+}
+
+// Debug block (hidden by default)
+if (isset($_GET['debug_env'])) {
+    header('Content-Type: application/json');
+    echo json_encode([
+        'status' => 'Configuration Forced',
+        'db_default' => config('database.default'),
+        'db_host' => config('database.connections.pgsql.host'),
+        'env_connection' => getenv('DB_CONNECTION'),
+    ]);
+    exit;
+}
 
 $app->handleRequest(Request::capture());
